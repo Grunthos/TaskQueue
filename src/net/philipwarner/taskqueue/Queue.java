@@ -98,7 +98,9 @@ public class Queue extends Thread {
 			// Run until we're told not to or until we decide no to.
 			while (!mTerminate) {
 				ScheduledTask stask;
-				// All queue manipulation needs to be synchronized on the manager.
+				Task task;
+				// All queue manipulation needs to be synchronized on the manager, as does
+				// assignments of 'active' tasks in queues.
 				synchronized(m_manager) {
 					stask = m_dba.getNextTask(m_name);
 					if (stask == null) {
@@ -107,15 +109,21 @@ public class Queue extends Thread {
 						m_manager.queueTerminating(this);
 						return;
 					}
+					if (stask.timeUntilRunnable == 0) {
+						// Ready to run now.
+						System.out.println("Queue " + m_name + " running task " + stask.id);
+						task = stask.getTask();
+						m_task = new WeakReference<Task>(task);
+					} else {
+						m_task = null;
+						task = null;
+					}
 				}
 
 				// If we get here, we have a task, or know that there is one waiting to run. Just wait.
 				// ENHANCE: A future optimization might be to put an Alarm in the QueueManager for any wait that 
 				// is longer than a minute.
-				if (stask.timeUntilRunnable == 0) {
-					// Ready to run now.
-					System.out.println("Queue " + m_name + " running task " + stask.id);
-					Task task = stask.getTask();
+				if (task != null) {
 					handleTask(task);
 				} else {
 					// Not ready, just wait. Allow for possible wake-up calls if something else gets queued.
@@ -153,26 +161,21 @@ public class Queue extends Thread {
 		boolean result = false;
 		boolean requeue = false; 
 		try {
+			task.setException(null);
 			try {
-				m_task = new WeakReference<Task>(task);
-				task.setException(null);
-				try {
-					task.setState(TaskState.running);
-					m_manager.notifyTaskChange(task, TaskActions.running);
-					result = m_manager.runOneTask(task);					
-				} finally {
-				}
-				requeue = !result;
-			} catch (Exception e) {
-				// Don't overwrite exception set by handler
-				if (task.getException() == null)
-					task.setException(e);
-				Log.e("Error running task " + task.getId(), e.getMessage());
+				task.setState(TaskState.running);
+				m_manager.notifyTaskChange(task, TaskActions.running);
+				result = m_manager.runOneTask(task);					
+			} finally {
 			}
-			handleResult(task, result, requeue);
-		} finally {
-			m_task = null;
+			requeue = !result;
+		} catch (Exception e) {
+			// Don't overwrite exception set by handler
+			if (task.getException() == null)
+				task.setException(e);
+			Log.e("Error running task " + task.getId(), e.getMessage());
 		}
+		handleResult(task, result, requeue);
 	}
 
 	/**
@@ -183,19 +186,28 @@ public class Queue extends Thread {
 	 * @param requeue	true if requeue needed
 	 */
 	private void handleResult(Task task, boolean result, boolean requeue) {
-		if (result) {
-			System.out.println("Task " + task.getId() + " succeeded");
-			m_dba.setTaskOk(task);
-			m_manager.notifyTaskChange(task, TaskActions.completed);
-		} else if (requeue) {
-			System.out.println("Task " + task.getId() + " requeueing");
-			m_dba.setTaskRequeque(task);
-			m_manager.notifyTaskChange(task, TaskActions.waiting);
-		} else {
-			System.out.println("Task " + task.getId() + " failed");
-			m_dba.setTaskFail(task, "Unhandled exception while runing task: " + task.getException().getMessage());
-			m_manager.notifyTaskChange(task, TaskActions.completed);
+		TaskActions message;
+		synchronized(m_manager) {
+			if (task.isAborting()) {
+				m_dba.deleteTask(task.getId());
+				message = TaskActions.completed;
+			} else if (result) {
+				System.out.println("Task " + task.getId() + " succeeded");
+				m_dba.setTaskOk(task);
+				message = TaskActions.completed;
+			} else if (requeue) {
+				System.out.println("Task " + task.getId() + " requeueing");
+				m_dba.setTaskRequeque(task);
+				message = TaskActions.waiting;
+			} else {
+				System.out.println("Task " + task.getId() + " failed");
+				m_dba.setTaskFail(task, "Unhandled exception while runing task: " + task.getException().getMessage());
+				message = TaskActions.completed;
+			}
+			m_task.clear();
+			m_task = null;
 		}
+		m_manager.notifyTaskChange(task, message);
 	}
 
 	public Task getTask() {

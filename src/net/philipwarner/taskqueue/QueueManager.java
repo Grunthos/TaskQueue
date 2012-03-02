@@ -452,27 +452,64 @@ public abstract class QueueManager extends Service {
 	}
 
 	/**
+	 * Return as TasksCursor for the specified category.
+	 * 
+	 * @param type		Subtype of cursor to retrieve
+	 * 
+	 * @return			Cursor of exceptions
+	 */
+	public TasksCursor getTasks(long category, TaskCursorSubtype type) {
+		return m_dba.getTasks(category, type);
+	}
+
+	/**
+	 * Return as TasksCursor for the specified category.
+	 * 
+	 * @param type		Subtype of cursor to retrieve
+	 * 
+	 * @return			Cursor of exceptions
+	 */
+	public boolean hasActiveTasks(long category) {
+		TasksCursor c = m_dba.getTasks(category, TaskCursorSubtype.active);
+		try {
+			return c.moveToFirst();
+		} finally {
+			c.close();
+		}
+	}
+
+	/**
 	 * Delete the specified Task object and related Event objects
 	 * 
 	 * @param id	ID of TaskException to delete.
 	 */
 	public void deleteTask(long id) {
+		boolean isActive = false;
 		// Check if the task is running in a queue.
 		synchronized(this) {
 			// Synchronize so that no queue will be able to get another task while we are deleting
 			for( Queue q : m_activeQueues.values() ) {
 				Task t = q.getTask();
-				if (t.getId() == id) {
+				if (t != null && t.getId() == id) {
+					// Abort it, don't delete from DB...it will do that WHEN it aborts
 					t.abortTask();
-					break;
+					isActive = true;
 				}
 			}
-			m_dba.deleteTask(id);
+			if (!isActive)
+				m_dba.deleteTask(id);
 		}
-		this.notifyEventChange(null, EventActions.deleted);
-		// This is non-optimal, but ... it's easy and clear.
-		// Deleting an event MAY result in an orphan task being deleted.
-		this.notifyTaskChange(null, TaskActions.deleted);
+		if (isActive) {
+			this.notifyEventChange(null, EventActions.updated);
+			// This is non-optimal, but ... it's easy and clear.
+			// Deleting an event MAY result in an orphan task being deleted.
+			this.notifyTaskChange(null, TaskActions.updated);
+		} else {
+			this.notifyEventChange(null, EventActions.deleted);
+			// This is non-optimal, but ... it's easy and clear.
+			// Deleting an event MAY result in an orphan task being deleted.
+			this.notifyTaskChange(null, TaskActions.deleted);
+		}
 	}
 
 	/**

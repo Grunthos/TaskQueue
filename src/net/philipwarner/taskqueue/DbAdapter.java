@@ -275,6 +275,7 @@ public class DbAdapter {
 	protected void updateTask(Task task) {
 		ContentValues cv = new ContentValues();
 		cv.put(DOM_TASK, Utils.serializeObject(task));
+		cv.put(DOM_CATEGORY, task.getCategory());
 		SQLiteDatabase db = getDb();
 		db.update(TBL_TASK, cv, DOM_ID + " = " + task.getId(), EMPTY_STRING_ARRAY);
 	}
@@ -293,6 +294,7 @@ public class DbAdapter {
 
 		ContentValues cv = new ContentValues();
 		cv.put(DOM_TASK, Utils.serializeObject(task));
+		cv.put(DOM_CATEGORY, task.getCategory());
 		cv.put(DOM_QUEUE_ID, queueId);
 		SQLiteDatabase db = getDb();
 		long jobId = db.insert(TBL_TASK, null, cv);
@@ -487,6 +489,7 @@ public class DbAdapter {
 			if (count > 0) {
 				long eventId = db.insert(TBL_EVENT, null, cv);
 				db.setTransactionSuccessful();
+				e.setId(eventId);
 				return eventId;
 			} else {
 				return 0;
@@ -583,6 +586,18 @@ public class DbAdapter {
 	 */
 	protected TasksCursor getTasks(TaskCursorSubtype type) {
 		return TasksCursor.fetchTasks(getDb(), type);
+	}
+
+	/**
+	 * Return as TasksCursor for the specified category and type.
+	 * 
+	 * @param category	Category to get
+	 * @param type		Subtype of cursor to retrieve
+	 * 
+	 * @return			Cursor of exceptions
+	 */
+	protected TasksCursor getTasks(long category, TaskCursorSubtype type) {
+		return TasksCursor.fetchTasks(getDb(), category, type);
 	}
 
 	/**

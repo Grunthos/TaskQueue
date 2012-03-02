@@ -34,10 +34,11 @@ public class DbHelper extends SQLiteOpenHelper {
 
 	// File name for database
 	private static final String DB_NAME = "net.philipwarner.taskqueue.database.db";
-	// Got to start somewhere
-	private static final int DB_VERSION = 1;
+	// TODO: Update on new release
+	private static final int DB_VERSION = 2;
 
 	// Domain names for fields in tables. Yes, I mix nomenclatures.
+	protected static final String DOM_CATEGORY = "category";
 	protected static final String DOM_EXCEPTION = "exception";
 	protected static final String DOM_EXCEPTION_DATE = "exception_date";
 	protected static final String DOM_FAILURE_REASON = "failure_reason";
@@ -86,6 +87,7 @@ public class DbHelper extends SQLiteOpenHelper {
 													+ DOM_QUEUED_DATE + " datetime default current_timestamp,\n"
 													+ DOM_PRIORITY + " long default 0,\n"
 													+ DOM_STATUS_CODE + " char default 'Q',\n"
+													+ DOM_CATEGORY + " int default 0 not null,\n"
 													+ DOM_RETRY_DATE + " datetime default current_timestamp,\n"
 													+ DOM_RETRY_COUNT + " int default 0,\n"
 													+ DOM_FAILURE_REASON + " text,\n"
@@ -203,8 +205,14 @@ public class DbHelper extends SQLiteOpenHelper {
 	 * Called to upgrade DB. Currently no upgrades.
 	 */
 	public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
-		if (oldVersion != newVersion)
-			throw new RuntimeException("Unsupported version upgrade");
+		int currVersion = oldVersion;
+		
+		if (currVersion == 1) {
+			currVersion++;
+			String sql = "Alter Table " + TBL_TASK + " Add " + DOM_CATEGORY + " int default 0";
+			db.execSQL(sql);
+		}
+
 		// Turn on foreign key support so that CASCADE works.
 		db.execSQL("PRAGMA foreign_keys = ON");
 	}

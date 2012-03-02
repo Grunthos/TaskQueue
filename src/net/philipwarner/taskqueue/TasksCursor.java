@@ -52,25 +52,58 @@ public class TasksCursor extends BindableItemSQLiteCursor {
 	private static String m_failedTasksQuery = "Select *, "
 			+ " (Select Count(*) from " + TBL_EVENT + " e Where e." + DOM_TASK_ID + "=t." + DOM_ID + ") as " + DOM_EVENT_COUNT
 			+ " From " + TBL_TASK + " t "
-			+ " Where " + DOM_STATUS_CODE + " = 'W' Order by " + DOM_ID + " desc";
+			+ " Where " + DOM_STATUS_CODE + " = 'F' %1$s Order by " + DOM_ID + " desc";
 
 	private static String m_allTasksQuery = "Select *, "
 			+ " (Select Count(*) from " + TBL_EVENT + " e Where e." + DOM_TASK_ID + "=t." + DOM_ID + ") as " + DOM_EVENT_COUNT
-			+ " From " + TBL_TASK + " t "
+			+ " From " + TBL_TASK + " t Where 1 = 1 %1$s"
 			+ " Order by " + DOM_ID + " desc";
 
 	private static String m_activeTasksQuery = "Select *, "
 			+ " (Select Count(*) from " + TBL_EVENT + " e Where e." + DOM_TASK_ID + "=t." + DOM_ID + ") as " + DOM_EVENT_COUNT
 			+ " From " + TBL_TASK + " t "
-			+ " Where " + DOM_STATUS_CODE + " <> 'S' Order by " + DOM_ID + " desc";
+			+ " Where Not " + DOM_STATUS_CODE + " In ('S','F') %1$s Order by " + DOM_ID + " desc";
 
 	private static String m_queuedTasksQuery = "Select *, "
 			+ " (Select Count(*) from " + TBL_EVENT + " e Where e." + DOM_TASK_ID + "=t." + DOM_ID + ") as " + DOM_EVENT_COUNT
 			+ " From " + TBL_TASK + " t "
-			+ " Where " + DOM_STATUS_CODE + " = 'Q' Order by " + DOM_ID + " desc";
+			+ " Where " + DOM_STATUS_CODE + " = 'Q' %1$s Order by " + DOM_ID + " desc";
 
 	public enum TaskCursorSubtype {all, failed, active, queued};
 
+	/**
+	 * Static method to get a TaskExceptions Cursor.
+	 * 
+	 * @param db
+	 *            Database
+	 * @param taskId
+	 *            ID of the task whose exceptions we want
+	 * 
+	 * @return A new TaskExceptionsCursor
+	 */
+	public static TasksCursor fetchTasks(SQLiteDatabase db, long category, TaskCursorSubtype type) {
+		String query;
+		switch(type) {
+			case all:
+				query = m_allTasksQuery;
+				break;
+			case queued:
+				query = m_queuedTasksQuery;
+				break;
+			case failed:
+				query = m_failedTasksQuery;
+				break;
+			case active:
+				query = m_activeTasksQuery;
+				break;
+			default:
+				throw new RuntimeException("Unexpected cursor subtype specified: " + type);
+		}
+		// Add extra 'where' clause
+		query = String.format(query, " and " + DOM_CATEGORY + " = " + category);
+		return (TasksCursor) db.rawQueryWithFactory(m_factory, query, new String[] {}, "");
+	}
+	
 	/**
 	 * Static method to get a TaskExceptions Cursor.
 	 * 
@@ -99,6 +132,8 @@ public class TasksCursor extends BindableItemSQLiteCursor {
 			default:
 				throw new RuntimeException("Unexpected cursor subtype specified: " + type);
 		}
+		// No extra 'where' clause
+		query = String.format(query, "");
 		return (TasksCursor) db.rawQueryWithFactory(m_factory, query, new String[] {}, "");
 	}
 	

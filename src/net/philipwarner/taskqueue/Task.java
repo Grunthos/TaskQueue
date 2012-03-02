@@ -52,6 +52,17 @@ public abstract class Task implements Serializable, BindableItem {
 	private String m_description = "";
 	private boolean m_abortTask = false;
 
+	/**
+	 * Return an application-defined category for the task; a default of 0 is provided.
+	 * 
+	 * The category can be used to lookup queued tasks based on category, for example to
+	 * allow an application to ensure only one job of a particular category is queued, or
+	 * to retrieve all jobs of a particular category.
+	 * 
+	 * @return
+	 */
+	public abstract long getCategory();
+
 	//protected abstract boolean run(Context context, int id);
 	//public abstract boolean abort(int id);
 	public String getDescription() {
@@ -76,7 +87,7 @@ public abstract class Task implements Serializable, BindableItem {
 	 * 
 	 * @return
 	 */
-	public boolean getAbortTask() {
+	public boolean isAborting() {
 		return m_abortTask;
 	}
 	public void abortTask() {
