@@ -31,11 +31,18 @@ import java.io.StreamCorruptedException;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.TimeZone;
 
 public class Utils {
+	// Used for formatting dates for sql; everything is assumed to be UTC, or converted to UTC since 
+	// UTC is the default SQLite TZ. 
+	static TimeZone tzUtc = TimeZone.getTimeZone("UTC");
+
 	/** Date format used in displaying and parsing dates in the database */
 	private static final DateFormat m_stdDateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-
+	static { 
+		m_stdDateFormat.setTimeZone(tzUtc);
+	}
 	/**
 	 * Utility routine to convert a date to a string.
 	 * 
