@@ -211,7 +211,10 @@ public class Queue extends Thread {
 	}
 
 	public Task getTask() {
-		return m_task.get();
+		if (m_task == null)
+			return null;
+		else
+			return m_task.get();
 	}
 
 }

@@ -53,8 +53,8 @@ import net.philipwarner.taskqueue.TasksCursor.TaskCursorSubtype;
  *
  */
 public abstract class QueueManager extends Service {
-	/** Used to sent notifications regarding tasks */
-	private NotificationManager m_notifier;
+//	/** Used to sent notifications regarding tasks */
+//	private NotificationManager m_notifier;
 	/** Database access layer */
 	private DbAdapter m_dba;
 	/** Collection of currently active queues */
@@ -92,8 +92,9 @@ public abstract class QueueManager extends Service {
 		m_uiThread = new WeakReference<Thread>(Thread.currentThread());
 		m_messageHandler = new MessageHandler();
 
-		// Create the notifier
-		m_notifier = (NotificationManager)getSystemService(NOTIFICATION_SERVICE);
+		//// Create the notifier
+		//m_notifier = (NotificationManager)getSystemService(NOTIFICATION_SERVICE);
+
 		// Connect to DB
 		m_dba = new DbAdapter(this);
 
@@ -234,29 +235,31 @@ public abstract class QueueManager extends Service {
 		// Nothing to do?
 	}
 
-	/**
-     * Show a notification while this service is running.
-	 * 
-	 * @param title
-	 * @param message
-	 */
-    public void showNotification(int id, String title, String message, Intent i) {
-        // In this sample, we'll use the same text for the ticker and the expanded notification
-        CharSequence text = message; //getText(R.string.local_service_started);
-
-        // Set the icon, scrolling text and timestamp
-        Notification notification = new Notification(android.R.drawable.ic_dialog_info, text, System.currentTimeMillis());
-
-        // The PendingIntent to launch our activity if the user selects this notification
-        PendingIntent contentIntent = PendingIntent.getActivity(this, 0, i, 0);
-
-        // Set the info for the views that show in the notification panel.
-        notification.setLatestEventInfo(this, title, //getText(R.string.local_service_label),
-                       text, contentIntent);
-
-        // Send the notification.
-        m_notifier.notify(id, notification);
-    }
+//	/**
+//     * Show a notification while this service is running.
+//	 * 
+//	 * @param title
+//	 * @param message
+//	 */
+//    public void showNotification(int id, String title, String message, Intent i) {
+//        // In this sample, we'll use the same text for the ticker and the expanded notification
+//        CharSequence text = message; //getText(R.string.local_service_started);
+//
+//        // Set the icon, scrolling text and timestamp
+//        Notification notification = new Notification(android.R.drawable.ic_dialog_info, text, System.currentTimeMillis());
+//        // Auto-cancel the notification
+//        notification.flags |= Notification.FLAG_AUTO_CANCEL;
+//
+//        // The PendingIntent to launch our activity if the user selects this notification
+//        PendingIntent contentIntent = PendingIntent.getActivity(this, 0, i, 0);
+//
+//        // Set the info for the views that show in the notification panel.
+//        notification.setLatestEventInfo(this, title, //getText(R.string.local_service_label),
+//                       text, contentIntent);
+//
+//        // Send the notification.
+//        m_notifier.notify(id, notification);
+//    }
 
     /**
      * Store a Task in the database to run on the specified Queue and start queue if necessary.
