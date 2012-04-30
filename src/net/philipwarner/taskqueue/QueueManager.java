@@ -23,15 +23,9 @@ package net.philipwarner.taskqueue;
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.Hashtable;
-import android.app.Notification;
-import android.app.NotificationManager;
-import android.app.PendingIntent;
-import android.app.Service;
-import android.content.Intent;
-import android.os.Binder;
+import android.content.Context;
 import android.os.Bundle;
 import android.os.Handler;
-import android.os.IBinder;
 import android.os.Message;
 import net.philipwarner.taskqueue.DbAdapter;
 import net.philipwarner.taskqueue.Listeners.*;
@@ -52,7 +46,7 @@ import net.philipwarner.taskqueue.TasksCursor.TaskCursorSubtype;
  * @author Philip Warner
  *
  */
-public abstract class QueueManager extends Service {
+public abstract class QueueManager { //extends Service {
 //	/** Used to sent notifications regarding tasks */
 //	private NotificationManager m_notifier;
 	/** Database access layer */
@@ -72,7 +66,7 @@ public abstract class QueueManager extends Service {
 	/** Static reference to the active QueueManager */
 	private static QueueManager m_queueManager;
 
-	public QueueManager() {
+	public QueueManager(Context context) {
 		super();
 		if (m_queueManager != null) {
 			// This is an essential requirement because (a) synchronization will not work with more than one
@@ -80,14 +74,7 @@ public abstract class QueueManager extends Service {
 			throw new RuntimeException("Only one QueueManager can be present");
 		}
 		m_queueManager = this;
-	}
 
-	public static final QueueManager getQueueManager() {
-		return m_queueManager;
-	}
-
-	@Override
-    public void onCreate() {
 		// Save the thread ... it is the UI thread
 		m_uiThread = new WeakReference<Thread>(Thread.currentThread());
 		m_messageHandler = new MessageHandler();
@@ -96,13 +83,35 @@ public abstract class QueueManager extends Service {
 		//m_notifier = (NotificationManager)getSystemService(NOTIFICATION_SERVICE);
 
 		// Connect to DB
-		m_dba = new DbAdapter(this);
+		m_dba = new DbAdapter(context.getApplicationContext());
 
         // Get active queues.
     	synchronized(this) {
 	        m_dba.getAllQueues(this);
     	}
-    }
+	}
+
+	public static final QueueManager getQueueManager() {
+		return m_queueManager;
+	}
+
+//	@Override
+//    public void onCreate() {
+//		// Save the thread ... it is the UI thread
+//		m_uiThread = new WeakReference<Thread>(Thread.currentThread());
+//		m_messageHandler = new MessageHandler();
+//
+//		//// Create the notifier
+//		//m_notifier = (NotificationManager)getSystemService(NOTIFICATION_SERVICE);
+//
+//		// Connect to DB
+//		m_dba = new DbAdapter(this);
+//
+//        // Get active queues.
+//    	synchronized(this) {
+//	        m_dba.getAllQueues(this);
+//    	}
+//    }
 
 	public void registerEventListener(OnEventChangeListener listener) {
 		synchronized(m_eventChangeListeners) {
@@ -211,29 +220,29 @@ public abstract class QueueManager extends Service {
 		}
 	}
 
-	/**
-	 * Class to enable client access to this object.
-	 * 
-	 * @author Philip Warner
-	 */
-	public class QueueManagerBinder extends Binder {
-		public QueueManager getService() {
-            return QueueManager.this;
-        }
-    }
-
-	// Create the object that receives interactions from clients.
-    private final IBinder m_binder = new QueueManagerBinder();
-
-    @Override
-	public IBinder onBind(Intent intent) {
-		return m_binder;
-	}
-
-	@Override
-	public void onStart(Intent intent, int flags) {
-		// Nothing to do?
-	}
+//	/**
+//	 * Class to enable client access to this object.
+//	 * 
+//	 * @author Philip Warner
+//	 */
+//	public class QueueManagerBinder extends Binder {
+//		public QueueManager getService() {
+//            return QueueManager.this;
+//        }
+//    }
+//
+//	// Create the object that receives interactions from clients.
+//    private final IBinder m_binder = new QueueManagerBinder();
+//
+//    @Override
+//	public IBinder onBind(Intent intent) {
+//		return m_binder;
+//	}
+//
+//	@Override
+//	public void onStart(Intent intent, int flags) {
+//		// Nothing to do?
+//	}
 
 //	/**
 //     * Show a notification while this service is running.
@@ -575,6 +584,13 @@ public abstract class QueueManager extends Service {
 		}		
 	}
 
+	/**
+	 * Return the running application context.
+	 * 
+	 * @return
+	 */
+	public abstract Context getApplicationContext();
+	
 	/**
 	 * Get a new Event object capable of representing a non-deserializable Event object.
 	 * 
